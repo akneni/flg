@@ -147,7 +147,7 @@ header {
 
 .chart {
     position: relative;
-    height: 240px;
+    height: 280px;
     overflow: hidden;
 }
 
@@ -316,6 +316,43 @@ footer {
     margin-right: 4px;
 }
 
+.palette-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #475569;
+}
+
+.palette-selector label {
+    color: #64748b;
+}
+
+.palette-selector select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    color: #e2e8f0;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.palette-selector select:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.palette-selector select:focus {
+    border-color: rgb(99, 102, 241);
+}
+
+.palette-selector select option {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 16px;
@@ -359,11 +396,11 @@ footer {
     <div class="stats">
         <div class="stat">
             <span class="stat-label">Total Samples</span>
-            <span class="stat-value">29,349,436</span>
+            <span class="stat-value">36,610,421</span>
         </div>
         <div class="stat">
             <span class="stat-label">Max Depth</span>
-            <span class="stat-value">11</span>
+            <span class="stat-value">13</span>
         </div>
         <div class="stat" id="matchedStat" style="display:none">
             <span class="stat-label">Matched</span>
@@ -373,49 +410,51 @@ footer {
     
     <div class="chart-container">
         <div class="chart" id="chart">
-            <div class="frame" style="left:0.0000%;width:2.6543%;bottom:40px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="779036" data-pct="2.65" data-depth="2" data-start="0" data-end="779036">__cos_fma</div>
-            <div class="frame" style="left:5.1857%;width:5.3746%;bottom:200px;background:rgb(179,14,94);" data-name="do_cos" data-samples="1577410" data-pct="5.37" data-depth="10" data-start="1521979" data-end="3099389">do_cos</div>
-            <div class="frame" style="left:5.1857%;width:5.3746%;bottom:180px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="1577410" data-pct="5.37" data-depth="9" data-start="1521979" data-end="3099389">__cos_fma</div>
-            <div class="frame" style="left:10.5603%;width:1.9559%;bottom:200px;background:rgb(179,113,14);" data-name="do_sin" data-samples="574048" data-pct="1.96" data-depth="10" data-start="3099389" data-end="3673437">do_sin</div>
-            <div class="frame" style="left:10.5603%;width:1.9559%;bottom:180px;background:rgb(28,189,14);" data-name="__sin_fma" data-samples="574048" data-pct="1.96" data-depth="9" data-start="3099389" data-end="3673437">__sin_fma</div>
-            <div class="frame" style="left:2.6543%;width:9.8619%;bottom:160px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="2894401" data-pct="9.86" data-depth="8" data-start="779036" data-end="3673437">compute_inner</div>
-            <div class="frame" style="left:2.6543%;width:9.8619%;bottom:140px;background:rgb(198,20,142);" data-name="compute_middle_a" data-samples="2894401" data-pct="9.86" data-depth="7" data-start="779036" data-end="3673437">compute_middle_a</div>
-            <div class="frame" style="left:15.0334%;width:2.3606%;bottom:180px;background:rgb(162,62,26);" data-name="sin@plt" data-samples="692819" data-pct="2.36" data-depth="9" data-start="4412210" data-end="5105029">sin@plt</div>
-            <div class="frame" style="left:12.5162%;width:4.8777%;bottom:160px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="1431592" data-pct="4.88" data-depth="8" data-start="3673437" data-end="5105029">compute_inner</div>
-            <div class="frame" style="left:12.5162%;width:4.8777%;bottom:140px;background:rgb(198,20,139);" data-name="compute_middle_b" data-samples="1431592" data-pct="4.88" data-depth="7" data-start="3673437" data-end="5105029">compute_middle_b</div>
-            <div class="frame" style="left:2.6543%;width:14.7396%;bottom:120px;background:rgb(196,152,23);" data-name="compute_outer_1" data-samples="4325993" data-pct="14.74" data-depth="6" data-start="779036" data-end="5105029">compute_outer_1</div>
-            <div class="frame" style="left:17.3940%;width:2.8802%;bottom:180px;background:rgb(179,14,94);" data-name="do_cos" data-samples="845320" data-pct="2.88" data-depth="9" data-start="5105029" data-end="5950349">do_cos</div>
-            <div class="frame" style="left:17.3940%;width:2.8802%;bottom:160px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="845320" data-pct="2.88" data-depth="8" data-start="5105029" data-end="5950349">__cos_fma</div>
-            <div class="frame" style="left:20.2742%;width:2.7749%;bottom:180px;background:rgb(179,113,14);" data-name="do_sin" data-samples="814408" data-pct="2.77" data-depth="9" data-start="5950349" data-end="6764757">do_sin</div>
-            <div class="frame" style="left:20.2742%;width:2.7749%;bottom:160px;background:rgb(28,189,14);" data-name="__sin_fma" data-samples="814408" data-pct="2.77" data-depth="8" data-start="5950349" data-end="6764757">__sin_fma</div>
-            <div class="frame" style="left:17.3940%;width:5.6551%;bottom:140px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="1659728" data-pct="5.66" data-depth="7" data-start="5105029" data-end="6764757">compute_inner</div>
-            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:200px;background:rgb(31,186,23);" data-name="libc_feresetround_sse_ctx" data-samples="892874" data-pct="3.04" data-depth="10" data-start="6764757" data-end="7657631">libc_feresetround_sse_ctx</div>
-            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:180px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="892874" data-pct="3.04" data-depth="9" data-start="6764757" data-end="7657631">__cos_fma</div>
-            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:160px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="892874" data-pct="3.04" data-depth="8" data-start="6764757" data-end="7657631">compute_inner</div>
-            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:140px;background:rgb(198,20,142);" data-name="compute_middle_a" data-samples="892874" data-pct="3.04" data-depth="7" data-start="6764757" data-end="7657631">compute_middle_a</div>
-            <div class="frame" style="left:17.3940%;width:8.6973%;bottom:120px;background:rgb(196,155,23);" data-name="compute_outer_2" data-samples="2552602" data-pct="8.70" data-depth="6" data-start="5105029" data-end="7657631">compute_outer_2</div>
-            <div class="frame" style="left:95.1857%;width:3.4765%;bottom:160px;background:rgb(24,120,179);" data-name="_int_free" data-samples="1020329" data-pct="3.48" data-depth="8" data-start="27936455" data-end="28956784">_int_free</div>
-            <div class="frame" style="left:95.1857%;width:3.4765%;bottom:140px;background:rgb(15,30,173);" data-name="cfree@GLIBC_2.2.5" data-samples="1020329" data-pct="3.48" data-depth="7" data-start="27936455" data-end="28956784">cfree@GLIBC_2.2.5</div>
-            <div class="frame" style="left:26.0912%;width:72.5709%;bottom:120px;background:rgb(21,203,45);" data-name="heavy_allocation_work" data-samples="21299153" data-pct="72.57" data-depth="6" data-start="7657631" data-end="28956784">heavy_allocation_work</div>
-            <div class="frame" style="left:98.6621%;width:0.4861%;bottom:140px;background:rgb(18,169,18);" data-name="__printf_chk" data-samples="142654" data-pct="0.49" data-depth="7" data-start="28956784" data-end="29099438">__printf_chk</div>
-            <div class="frame" style="left:98.6621%;width:0.4861%;bottom:120px;background:rgb(97,174,14);" data-name="printf" data-samples="142654" data-pct="0.49" data-depth="6" data-start="28956784" data-end="29099438">printf</div>
-            <div class="frame" style="left:2.6543%;width:96.4939%;bottom:100px;background:rgb(26,156,28);" data-name="main" data-samples="28320402" data-pct="96.49" data-depth="5" data-start="779036" data-end="29099438">main</div>
-            <div class="frame" style="left:2.6543%;width:96.4939%;bottom:80px;background:rgb(198,198,20);" data-name="__libc_start_call_main" data-samples="28320402" data-pct="96.49" data-depth="4" data-start="779036" data-end="29099438">__libc_start_call_main</div>
-            <div class="frame" style="left:2.6543%;width:96.4939%;bottom:60px;background:rgb(104,191,17);" data-name="__libc_start_main@GLIBC_2.2.5" data-samples="28320402" data-pct="96.49" data-depth="3" data-start="779036" data-end="29099438">__libc_start_main@GLIBC_2.2.5</div>
-            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:220px;background:rgb(173,25,165);" data-name="do_lookup_x" data-samples="124999" data-pct="0.43" data-depth="11" data-start="29099438" data-end="29224437">do_lookup_x</div>
-            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:200px;background:rgb(83,156,26);" data-name="_dl_lookup_symbol_x" data-samples="124999" data-pct="0.43" data-depth="10" data-start="29099438" data-end="29224437">_dl_lookup_symbol_x</div>
-            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:180px;background:rgb(112,20,157);" data-name="elf_machine_rela" data-samples="124999" data-pct="0.43" data-depth="9" data-start="29099438" data-end="29224437">elf_machine_rela</div>
-            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:160px;background:rgb(56,171,27);" data-name="elf_dynamic_do_Rela" data-samples="124999" data-pct="0.43" data-depth="8" data-start="29099438" data-end="29224437">elf_dynamic_do_Rela</div>
-            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:140px;background:rgb(127,187,16);" data-name="_dl_relocate_object" data-samples="124999" data-pct="0.43" data-depth="7" data-start="29099438" data-end="29224437">_dl_relocate_object</div>
-            <div class="frame" style="left:99.5741%;width:0.4259%;bottom:160px;background:rgb(32,97,182);" data-name="_dl_new_object" data-samples="124999" data-pct="0.43" data-depth="8" data-start="29224437" data-end="29349436">_dl_new_object</div>
-            <div class="frame" style="left:99.5741%;width:0.4259%;bottom:140px;background:rgb(119,16,187);" data-name="setup_vdso" data-samples="124999" data-pct="0.43" data-depth="7" data-start="29224437" data-end="29349436">setup_vdso</div>
-            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:120px;background:rgb(185,24,109);" data-name="dl_main" data-samples="249998" data-pct="0.85" data-depth="6" data-start="29099438" data-end="29349436">dl_main</div>
-            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:100px;background:rgb(186,123,23);" data-name="_dl_sysdep_start" data-samples="249998" data-pct="0.85" data-depth="5" data-start="29099438" data-end="29349436">_dl_sysdep_start</div>
-            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:80px;background:rgb(41,181,22);" data-name="_dl_start_final" data-samples="249998" data-pct="0.85" data-depth="4" data-start="29099438" data-end="29349436">_dl_start_final</div>
-            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:60px;background:rgb(191,11,197);" data-name="_dl_start" data-samples="249998" data-pct="0.85" data-depth="3" data-start="29099438" data-end="29349436">_dl_start</div>
-            <div class="frame" style="left:2.6543%;width:97.3457%;bottom:40px;background:rgb(192,11,123);" data-name="_start" data-samples="28570400" data-pct="97.35" data-depth="2" data-start="779036" data-end="29349436">_start</div>
-            <div class="frame" style="left:0.0000%;width:100.0000%;bottom:20px;background:rgb(180,107,17);" data-name="cpu_test" data-samples="29349436" data-pct="100.00" data-depth="1" data-start="0" data-end="29349436">cpu_test</div>
-            <div class="frame" style="left:0.0000%;width:100.0000%;bottom:0px;background:rgb(99,102,241);" data-name="all" data-samples="29349436" data-pct="100.00" data-depth="0" data-start="0" data-end="29349436">all</div>
+            <div class="frame" style="left:0.0000%;width:1.3848%;bottom:40px;background:rgb(188,15,203);" data-name="__sin_fma" data-samples="506990" data-pct="1.38" data-depth="2" data-start="0" data-end="506990">__sin_fma</div>
+            <div class="frame" style="left:4.3786%;width:2.4014%;bottom:200px;background:rgb(112,27,191);" data-name="do_cos" data-samples="879161" data-pct="2.40" data-depth="10" data-start="1603042" data-end="2482203">do_cos</div>
+            <div class="frame" style="left:4.3786%;width:2.4014%;bottom:180px;background:rgb(190,25,208);" data-name="__cos_fma" data-samples="879161" data-pct="2.40" data-depth="9" data-start="1603042" data-end="2482203">__cos_fma</div>
+            <div class="frame" style="left:9.2607%;width:1.4776%;bottom:200px;background:rgb(12,106,221);" data-name="libc_feholdsetround_sse_ctx" data-samples="540966" data-pct="1.48" data-depth="10" data-start="3390365" data-end="3931331">libc_feholdsetround_sse_ctx</div>
+            <div class="frame" style="left:6.7800%;width:3.9582%;bottom:180px;background:rgb(188,15,203);" data-name="__sin_fma" data-samples="1449128" data-pct="3.96" data-depth="9" data-start="2482203" data-end="3931331">__sin_fma</div>
+            <div class="frame" style="left:10.7383%;width:1.1463%;bottom:180px;background:rgb(220,20,223);" data-name="cos@plt" data-samples="419673" data-pct="1.15" data-depth="9" data-start="3931331" data-end="4351004">cos@plt</div>
+            <div class="frame" style="left:1.3848%;width:10.4998%;bottom:160px;background:rgb(169,32,197);" data-name="compute_inner" data-samples="3844014" data-pct="10.50" data-depth="8" data-start="506990" data-end="4351004">compute_inner</div>
+            <div class="frame" style="left:1.3848%;width:10.4998%;bottom:140px;background:rgb(80,16,218);" data-name="compute_middle_a" data-samples="3844014" data-pct="10.50" data-depth="7" data-start="506990" data-end="4351004">compute_middle_a</div>
+            <div class="frame" style="left:11.8846%;width:1.8381%;bottom:200px;background:rgb(112,27,191);" data-name="do_cos" data-samples="672951" data-pct="1.84" data-depth="10" data-start="4351004" data-end="5023955">do_cos</div>
+            <div class="frame" style="left:13.7227%;width:1.6992%;bottom:200px;background:rgb(12,106,221);" data-name="libc_feholdsetround_sse_ctx" data-samples="622067" data-pct="1.70" data-depth="10" data-start="5023955" data-end="5646022">libc_feholdsetround_sse_ctx</div>
+            <div class="frame" style="left:11.8846%;width:3.5373%;bottom:180px;background:rgb(190,25,208);" data-name="__cos_fma" data-samples="1295018" data-pct="3.54" data-depth="9" data-start="4351004" data-end="5646022">__cos_fma</div>
+            <div class="frame" style="left:15.4219%;width:1.7953%;bottom:200px;background:rgb(12,106,221);" data-name="libc_feholdsetround_sse_ctx" data-samples="657281" data-pct="1.80" data-depth="10" data-start="5646022" data-end="6303303">libc_feholdsetround_sse_ctx</div>
+            <div class="frame" style="left:15.4219%;width:1.7953%;bottom:180px;background:rgb(188,15,203);" data-name="__sin_fma" data-samples="657281" data-pct="1.80" data-depth="9" data-start="5646022" data-end="6303303">__sin_fma</div>
+            <div class="frame" style="left:11.8846%;width:5.3326%;bottom:160px;background:rgb(169,32,197);" data-name="compute_inner" data-samples="1952299" data-pct="5.33" data-depth="8" data-start="4351004" data-end="6303303">compute_inner</div>
+            <div class="frame" style="left:11.8846%;width:5.3326%;bottom:140px;background:rgb(83,16,218);" data-name="compute_middle_b" data-samples="1952299" data-pct="5.33" data-depth="7" data-start="4351004" data-end="6303303">compute_middle_b</div>
+            <div class="frame" style="left:1.3848%;width:15.8324%;bottom:120px;background:rgb(30,63,163);" data-name="compute_outer_1" data-samples="5796313" data-pct="15.83" data-depth="6" data-start="506990" data-end="6303303">compute_outer_1</div>
+            <div class="frame" style="left:23.1727%;width:5.8015%;bottom:180px;background:rgb(112,27,191);" data-name="do_cos" data-samples="2123952" data-pct="5.80" data-depth="9" data-start="8483633" data-end="10607585">do_cos</div>
+            <div class="frame" style="left:21.2613%;width:7.7130%;bottom:160px;background:rgb(190,25,208);" data-name="__cos_fma" data-samples="2823751" data-pct="7.71" data-depth="8" data-start="7783834" data-end="10607585">__cos_fma</div>
+            <div class="frame" style="left:28.9742%;width:2.0234%;bottom:160px;background:rgb(22,169,222);" data-name="sin@plt" data-samples="740758" data-pct="2.02" data-depth="8" data-start="10607585" data-end="11348343">sin@plt</div>
+            <div class="frame" style="left:17.2172%;width:13.7803%;bottom:140px;background:rgb(169,32,197);" data-name="compute_inner" data-samples="5045040" data-pct="13.78" data-depth="7" data-start="6303303" data-end="11348343">compute_inner</div>
+            <div class="frame" style="left:17.2172%;width:13.7803%;bottom:120px;background:rgb(30,61,163);" data-name="compute_outer_2" data-samples="5045040" data-pct="13.78" data-depth="6" data-start="6303303" data-end="11348343">compute_outer_2</div>
+            <div class="frame" style="left:30.9976%;width:68.0446%;bottom:120px;background:rgb(28,186,210);" data-name="heavy_allocation_work" data-samples="24911429" data-pct="68.04" data-depth="6" data-start="11348343" data-end="36259772">heavy_allocation_work</div>
+            <div class="frame" style="left:1.3848%;width:97.6574%;bottom:100px;background:rgb(25,181,184);" data-name="main" data-samples="35752782" data-pct="97.66" data-depth="5" data-start="506990" data-end="36259772">main</div>
+            <div class="frame" style="left:1.3848%;width:97.6574%;bottom:80px;background:rgb(14,14,199);" data-name="__libc_start_call_main" data-samples="35752782" data-pct="97.66" data-depth="4" data-start="506990" data-end="36259772">__libc_start_call_main</div>
+            <div class="frame" style="left:1.3848%;width:97.6574%;bottom:60px;background:rgb(102,12,191);" data-name="__libc_start_main@GLIBC_2.2.5" data-samples="35752782" data-pct="97.66" data-depth="3" data-start="506990" data-end="36259772">__libc_start_main@GLIBC_2.2.5</div>
+            <div class="frame" style="left:99.0422%;width:0.3414%;bottom:240px;background:rgb(11,172,186);" data-name="strcmp" data-samples="124999" data-pct="0.34" data-depth="12" data-start="36259772" data-end="36384771">strcmp</div>
+            <div class="frame" style="left:99.0422%;width:0.3414%;bottom:220px;background:rgb(124,16,233);" data-name="_dl_name_match_p" data-samples="124999" data-pct="0.34" data-depth="11" data-start="36259772" data-end="36384771">_dl_name_match_p</div>
+            <div class="frame" style="left:99.0422%;width:0.3414%;bottom:200px;background:rgb(30,81,198);" data-name="_dl_map_object" data-samples="124999" data-pct="0.34" data-depth="10" data-start="36259772" data-end="36384771">_dl_map_object</div>
+            <div class="frame" style="left:99.0422%;width:0.3414%;bottom:180px;background:rgb(12,157,185);" data-name="openaux" data-samples="124999" data-pct="0.34" data-depth="9" data-start="36259772" data-end="36384771">openaux</div>
+            <div class="frame" style="left:99.0422%;width:0.3414%;bottom:160px;background:rgb(10,174,183);" data-name="_dl_catch_exception" data-samples="124999" data-pct="0.34" data-depth="8" data-start="36259772" data-end="36384771">_dl_catch_exception</div>
+            <div class="frame" style="left:99.0422%;width:0.3414%;bottom:140px;background:rgb(144,16,187);" data-name="_dl_map_object_deps" data-samples="124999" data-pct="0.34" data-depth="7" data-start="36259772" data-end="36384771">_dl_map_object_deps</div>
+            <div class="frame" style="left:99.6827%;width:0.3173%;bottom:260px;background:rgb(11,172,186);" data-name="strcmp" data-samples="116160" data-pct="0.32" data-depth="13" data-start="36494261" data-end="36610421">strcmp</div>
+            <div class="frame" style="left:99.6827%;width:0.3173%;bottom:240px;background:rgb(18,154,195);" data-name="check_match" data-samples="116160" data-pct="0.32" data-depth="12" data-start="36494261" data-end="36610421">check_match</div>
+            <div class="frame" style="left:99.3836%;width:0.6164%;bottom:220px;background:rgb(29,19,225);" data-name="do_lookup_x" data-samples="225650" data-pct="0.62" data-depth="11" data-start="36384771" data-end="36610421">do_lookup_x</div>
+            <div class="frame" style="left:99.3836%;width:0.6164%;bottom:200px;background:rgb(139,17,232);" data-name="_dl_lookup_symbol_x" data-samples="225650" data-pct="0.62" data-depth="10" data-start="36384771" data-end="36610421">_dl_lookup_symbol_x</div>
+            <div class="frame" style="left:99.3836%;width:0.6164%;bottom:180px;background:rgb(35,83,178);" data-name="elf_machine_rela" data-samples="225650" data-pct="0.62" data-depth="9" data-start="36384771" data-end="36610421">elf_machine_rela</div>
+            <div class="frame" style="left:99.3836%;width:0.6164%;bottom:160px;background:rgb(149,23,180);" data-name="elf_dynamic_do_Rela" data-samples="225650" data-pct="0.62" data-depth="8" data-start="36384771" data-end="36610421">elf_dynamic_do_Rela</div>
+            <div class="frame" style="left:99.3836%;width:0.6164%;bottom:140px;background:rgb(78,16,192);" data-name="_dl_relocate_object" data-samples="225650" data-pct="0.62" data-depth="7" data-start="36384771" data-end="36610421">_dl_relocate_object</div>
+            <div class="frame" style="left:99.0422%;width:0.9578%;bottom:120px;background:rgb(101,24,189);" data-name="dl_main" data-samples="350649" data-pct="0.96" data-depth="6" data-start="36259772" data-end="36610421">dl_main</div>
+            <div class="frame" style="left:99.0422%;width:0.9578%;bottom:100px;background:rgb(27,84,176);" data-name="_dl_sysdep_start" data-samples="350649" data-pct="0.96" data-depth="5" data-start="36259772" data-end="36610421">_dl_sysdep_start</div>
+            <div class="frame" style="left:99.0422%;width:0.9578%;bottom:80px;background:rgb(175,12,196);" data-name="_dl_start_final" data-samples="350649" data-pct="0.96" data-depth="4" data-start="36259772" data-end="36610421">_dl_start_final</div>
+            <div class="frame" style="left:99.0422%;width:0.9578%;bottom:60px;background:rgb(19,26,225);" data-name="_dl_start" data-samples="350649" data-pct="0.96" data-depth="3" data-start="36259772" data-end="36610421">_dl_start</div>
+            <div class="frame" style="left:1.3848%;width:98.6152%;bottom:40px;background:rgb(101,26,223);" data-name="_start" data-samples="36103431" data-pct="98.62" data-depth="2" data-start="506990" data-end="36610421">_start</div>
+            <div class="frame" style="left:0.0000%;width:100.0000%;bottom:20px;background:rgb(22,112,222);" data-name="cpu_test" data-samples="36610421" data-pct="100.00" data-depth="1" data-start="0" data-end="36610421">cpu_test</div>
+            <div class="frame" style="left:0.0000%;width:100.0000%;bottom:0px;background:rgb(99,102,241);" data-name="all" data-samples="36610421" data-pct="100.00" data-depth="0" data-start="0" data-end="36610421">all</div>
         </div>
     </div>
     
@@ -451,8 +490,15 @@ footer {
     </div>
     
     <footer>
-        <div class="footer-info">
-            Generated by flamegraph-rs
+        <div class="palette-selector">
+            <label for="paletteSelect">Color Palette:</label>
+            <select id="paletteSelect">
+                <option value="warm">Warm</option>
+                <option value="cool" selected>Cool</option>
+                <option value="neon">Neon</option>
+                <option value="pastel">Pastel</option>
+                <option value="mono">Monochrome</option>
+            </select>
         </div>
         <div class="keyboard-hints">
             <span><kbd>Click</kbd> Zoom in</span>
@@ -479,9 +525,91 @@ footer {
     const contextMenu = document.getElementById('contextMenu');
     const hideStackBtn = document.getElementById('hideStack');
     const resetHiddenBtn = document.getElementById('resetHidden');
+    const paletteSelect = document.getElementById('paletteSelect');
+    
+    // Color palette functions
+    const palettes = {
+        warm: (hash) => {
+            const hue = (hash % 60) + 0; // Red-orange-yellow range (0-60)
+            const sat = 0.70 + ((hash >> 8) % 20) / 100;
+            const lit = 0.35 + ((hash >> 16) % 10) / 100;
+            return { h: hue, s: sat, l: lit };
+        },
+        cool: (hash) => {
+            const hue = (hash % 120) + 180; // Cyan-blue-purple range (180-300)
+            const sat = 0.65 + ((hash >> 8) % 25) / 100;
+            const lit = 0.38 + ((hash >> 16) % 12) / 100;
+            return { h: hue, s: sat, l: lit };
+        },
+        neon: (hash) => {
+            const hue = hash % 360;
+            const sat = 0.90 + ((hash >> 8) % 10) / 100;
+            const lit = 0.45 + ((hash >> 16) % 10) / 100;
+            return { h: hue, s: sat, l: lit };
+        },
+        pastel: (hash) => {
+            const hue = hash % 360;
+            const sat = 0.40 + ((hash >> 8) % 20) / 100;
+            const lit = 0.55 + ((hash >> 16) % 15) / 100;
+            return { h: hue, s: sat, l: lit };
+        },
+        mono: (hash) => {
+            const hue = 220; // Blue-gray
+            const sat = 0.15 + ((hash >> 8) % 10) / 100;
+            const lit = 0.25 + ((hash >> 16) % 30) / 100;
+            return { h: hue, s: sat, l: lit };
+        }
+    };
+    
+    function hslToRgb(h, s, l) {
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l - c / 2;
+        let r, g, b;
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+        return {
+            r: Math.round((r + m) * 255),
+            g: Math.round((g + m) * 255),
+            b: Math.round((b + m) * 255)
+        };
+    }
+    
+    function hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+        }
+        return hash;
+    }
+    
+    function applyPalette(paletteName) {
+        const palette = palettes[paletteName];
+        if (!palette) return;
+        
+        frames.forEach(f => {
+            const name = f.dataset.name;
+            if (name === 'all') {
+                f.style.background = 'rgb(99, 102, 241)';
+                return;
+            }
+            const hash = hashString(name);
+            const hsl = palette(hash);
+            const rgb = hslToRgb(hsl.h, hsl.s, hsl.l);
+            f.style.background = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+        });
+    }
+    
+    paletteSelect.addEventListener('change', (e) => {
+        applyPalette(e.target.value);
+    });
     
     const frames = Array.from(document.querySelectorAll('.frame'));
-    const totalSamples = 29349436;
+    const totalSamples = 36610421;
     
     let zoomedFrame = null;
     let searchTerm = null;
