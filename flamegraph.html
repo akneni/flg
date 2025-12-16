@@ -1,244 +1,63 @@
-//! Flame graph HTML generator.
-//!
-//! Takes collapsed stack data and renders an interactive HTML flame graph
-//! with a modern dark theme.
-//!
-//! # Example
-//!
-//! ```
-//! use std::collections::HashMap;
-//! use flamegraph::generate_flamegraph;
-//!
-//! let mut stacks = HashMap::new();
-//! stacks.insert("main;foo;bar".to_string(), 100);
-//! stacks.insert("main;foo;baz".to_string(), 50);
-//!
-//! let html = generate_flamegraph(&stacks, "My Flame Graph", None);
-//! std::fs::write("flamegraph.html", html).unwrap();
-//! ```
-
-use std::collections::HashMap;
-use std::fmt::Write;
-
-/// A frame in the flame graph.
-#[derive(Debug, Clone)]
-struct Frame {
-    name: String,
-    depth: usize,
-    start: u64,
-    end: u64,
-}
-
-/// Process stacks into frames using the flow/merge algorithm.
-fn process_stacks(stacks: &HashMap<String, u64>) -> (Vec<Frame>, u64, usize) {
-    let mut sorted: Vec<_> = stacks.iter().collect();
-    sorted.sort_by(|a, b| a.0.cmp(b.0));
-
-    let mut frames = Vec::new();
-    let mut last_stack: Vec<&str> = Vec::new();
-    let mut time: u64 = 0;
-    let mut depth_max: usize = 0;
-    let mut open_frames: HashMap<(String, usize), u64> = HashMap::new();
-
-    for (stack_str, count) in &sorted {
-        let this_stack: Vec<&str> = std::iter::once("")
-            .chain(stack_str.split(';'))
-            .collect();
-
-        let len_same = last_stack
-            .iter()
-            .zip(this_stack.iter())
-            .take_while(|(a, b)| a == b)
-            .count();
-
-        // Close frames no longer in path
-        for i in (len_same..last_stack.len()).rev() {
-            let name = last_stack[i].to_string();
-            let key = (name.clone(), i);
-            if let Some(start) = open_frames.remove(&key) {
-                frames.push(Frame {
-                    name,
-                    depth: i,
-                    start,
-                    end: time,
-                });
-                depth_max = depth_max.max(i);
-            }
-        }
-
-        // Open new frames
-        for i in len_same..this_stack.len() {
-            let name = this_stack[i].to_string();
-            open_frames.insert((name, i), time);
-        }
-
-        time += *count;
-        last_stack = this_stack;
-    }
-
-    // Close remaining frames
-    for i in (0..last_stack.len()).rev() {
-        let name = last_stack[i].to_string();
-        let key = (name.clone(), i);
-        if let Some(start) = open_frames.remove(&key) {
-            frames.push(Frame {
-                name,
-                depth: i,
-                start,
-                end: time,
-            });
-            depth_max = depth_max.max(i);
-        }
-    }
-
-    (frames, time, depth_max)
-}
-
-/// Generate a color for a function name (deterministic based on name hash).
-fn color_for_name(name: &str) -> (u8, u8, u8) {
-    if name.is_empty() {
-        return (99, 102, 241); // Indigo for root
-    }
-    
-    let hash: u32 = name.bytes().fold(0u32, |acc, b| {
-        acc.wrapping_mul(31).wrapping_add(b as u32)
-    });
-    
-    // Generate hue from hash, keep saturation high and lightness low for dark boxes with light text
-    let hue = (hash % 360) as f64;
-    let saturation = 0.70 + (((hash >> 8) % 20) as f64 / 100.0); // 0.70-0.90
-    let lightness = 0.35 + (((hash >> 16) % 10) as f64 / 100.0); // 0.35-0.45
-    
-    hsl_to_rgb(hue, saturation, lightness)
-}
-
-fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
-    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
-    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
-    let m = l - c / 2.0;
-    
-    let (r, g, b) = match (h as u32) / 60 {
-        0 => (c, x, 0.0),
-        1 => (x, c, 0.0),
-        2 => (0.0, c, x),
-        3 => (0.0, x, c),
-        4 => (x, 0.0, c),
-        _ => (c, 0.0, x),
-    };
-    
-    (
-        ((r + m) * 255.0) as u8,
-        ((g + m) * 255.0) as u8,
-        ((b + m) * 255.0) as u8,
-    )
-}
-
-fn escape_html(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#39;")
-}
-
-fn format_samples(n: u64) -> String {
-    let s = n.to_string();
-    let mut result = String::new();
-    for (i, c) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
-            result.push(',');
-        }
-        result.push(c);
-    }
-    result
-}
-
-/// Generate a flame graph HTML document.
-///
-/// # Arguments
-/// * `stacks` - HashMap of semicolon-separated stack traces to sample counts
-/// * `title` - Title for the flame graph
-/// * `subtitle` - Optional subtitle
-///
-/// # Returns
-/// Complete HTML document as a string
-pub fn generate_flamegraph(
-    stacks: &HashMap<String, u64>,
-    title: &str,
-    subtitle: Option<&str>,
-) -> String {
-    let (frames, total_samples, depth_max) = process_stacks(stacks);
-    
-    if total_samples == 0 {
-        return generate_error_html("No valid stack data provided");
-    }
-
-    let frame_height = 20;
-    let chart_height = (depth_max + 1) * frame_height;
-
-    let mut html = String::with_capacity(512 * 1024);
-    
-    // HTML header and styles
-    write!(html, r##"<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title}</title>
+<title>Flamegraph</title>
 <style>
-* {{
+* {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-}}
+}
 
-body {{
+body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: linear-gradient(180deg, #0c0f1a 0%, #151928 100%);
     color: #e2e8f0;
     min-height: 100vh;
     overflow-x: hidden;
-}}
+}
 
-.container {{
+.container {
     max-width: 100%;
     padding: 24px;
-}}
+}
 
-header {{
+header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 16px;
-}}
+}
 
-.title-section h1 {{
+.title-section h1 {
     font-size: 1.75rem;
     font-weight: 600;
     color: #f1f5f9;
     letter-spacing: -0.025em;
     margin-bottom: 4px;
-}}
+}
 
-.title-section .subtitle {{
+.title-section .subtitle {
     font-size: 0.875rem;
     color: #64748b;
     font-weight: 400;
-}}
+}
 
-.controls {{
+.controls {
     display: flex;
     gap: 12px;
     align-items: center;
-}}
+}
 
-.search-box {{
+.search-box {
     position: relative;
-}}
+}
 
-.search-box input {{
+.search-box input {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -248,28 +67,28 @@ header {{
     width: 280px;
     transition: all 0.2s ease;
     outline: none;
-}}
+}
 
-.search-box input:focus {{
+.search-box input:focus {
     border-color: rgba(99, 102, 241, 0.5);
     background: rgba(255, 255, 255, 0.08);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}}
+}
 
-.search-box input::placeholder {{
+.search-box input::placeholder {
     color: #475569;
-}}
+}
 
-.search-box svg {{
+.search-box svg {
     position: absolute;
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
     color: #475569;
     pointer-events: none;
-}}
+}
 
-.btn {{
+.btn {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -279,62 +98,62 @@ header {{
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 500;
-}}
+}
 
-.btn:hover {{
+.btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #e2e8f0;
-}}
+}
 
-.btn:disabled {{
+.btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}}
+}
 
-.stats {{
+.stats {
     display: flex;
     gap: 24px;
     margin-bottom: 16px;
     flex-wrap: wrap;
-}}
+}
 
-.stat {{
+.stat {
     display: flex;
     flex-direction: column;
     gap: 2px;
-}}
+}
 
-.stat-label {{
+.stat-label {
     font-size: 0.75rem;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}}
+}
 
-.stat-value {{
+.stat-value {
     font-size: 0.9375rem;
     color: #e2e8f0;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
-}}
+}
 
-.chart-container {{
+.chart-container {
     position: relative;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     overflow: hidden;
-}}
+}
 
-.chart {{
+.chart {
     position: relative;
-    height: {chart_height}px;
+    height: 240px;
     overflow: hidden;
-}}
+}
 
-.frame {{
+.frame {
     position: absolute;
-    height: {frame_height_css}px;
+    height: 18px;
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -350,34 +169,34 @@ header {{
     text-overflow: ellipsis;
     white-space: nowrap;
     border: 1px solid rgba(255, 255, 255, 0.1);
-}}
+}
 
-.frame:hover {{
+.frame:hover {
     filter: brightness(1.2);
     z-index: 100;
     border-color: rgba(255, 255, 255, 0.3);
-}}
+}
 
-.frame.highlight {{
+.frame.highlight {
     background: rgb(250, 204, 21) !important;
     color: #1e1e1e !important;
     border-color: rgb(234, 179, 8) !important;
     text-shadow: none;
-}}
+}
 
-.frame.faded {{
+.frame.faded {
     opacity: 0.25;
-}}
+}
 
-.frame.zoomed-parent {{
+.frame.zoomed-parent {
     opacity: 0.4;
-}}
+}
 
-.frame.hidden {{
+.frame.hidden {
     display: none;
-}}
+}
 
-.tooltip {{
+.tooltip {
     position: fixed;
     background: #1e293b;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -391,9 +210,9 @@ header {{
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     opacity: 0;
     transition: opacity 0.15s ease;
-}}
+}
 
-.context-menu {{
+.context-menu {
     position: fixed;
     background: #1e293b;
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -405,13 +224,13 @@ header {{
     min-width: 180px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
     display: none;
-}}
+}
 
-.context-menu.visible {{
+.context-menu.visible {
     display: block;
-}}
+}
 
-.context-menu-item {{
+.context-menu-item {
     padding: 10px 12px;
     cursor: pointer;
     border-radius: 6px;
@@ -419,53 +238,53 @@ header {{
     align-items: center;
     gap: 10px;
     transition: background 0.1s ease;
-}}
+}
 
-.context-menu-item:hover {{
+.context-menu-item:hover {
     background: rgba(255, 255, 255, 0.1);
-}}
+}
 
-.context-menu-item svg {{
+.context-menu-item svg {
     width: 16px;
     height: 16px;
     opacity: 0.7;
-}}
+}
 
-.context-menu-separator {{
+.context-menu-separator {
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
     margin: 4px 0;
-}}
+}
 
-.tooltip.visible {{
+.tooltip.visible {
     opacity: 1;
-}}
+}
 
-.tooltip-name {{
+.tooltip-name {
     font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
     font-weight: 600;
     color: #f1f5f9;
     margin-bottom: 8px;
     word-break: break-all;
-}}
+}
 
-.tooltip-stats {{
+.tooltip-stats {
     display: grid;
     grid-template-columns: auto auto;
     gap: 4px 16px;
     font-size: 0.75rem;
-}}
+}
 
-.tooltip-stats dt {{
+.tooltip-stats dt {
     color: #64748b;
-}}
+}
 
-.tooltip-stats dd {{
+.tooltip-stats dd {
     color: #94a3b8;
     font-variant-numeric: tabular-nums;
-}}
+}
 
-footer {{
+footer {
     margin-top: 16px;
     padding: 16px 0;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -474,55 +293,55 @@ footer {{
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-}}
+}
 
-.footer-info {{
+.footer-info {
     font-size: 0.75rem;
     color: #475569;
-}}
+}
 
-.keyboard-hints {{
+.keyboard-hints {
     display: flex;
     gap: 16px;
     font-size: 0.75rem;
     color: #475569;
-}}
+}
 
-.keyboard-hints kbd {{
+.keyboard-hints kbd {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
     padding: 2px 6px;
     font-family: inherit;
     font-size: 0.6875rem;
     margin-right: 4px;
-}}
+}
 
-@media (max-width: 768px) {{
-    .container {{
+@media (max-width: 768px) {
+    .container {
         padding: 16px;
-    }}
+    }
     
-    header {{
+    header {
         flex-direction: column;
-    }}
+    }
     
-    .search-box input {{
+    .search-box input {
         width: 100%;
-    }}
+    }
     
-    .controls {{
+    .controls {
         width: 100%;
         flex-wrap: wrap;
-    }}
-}}
+    }
+}
 </style>
 </head>
 <body>
 <div class="container">
     <header>
         <div class="title-section">
-            <h1>{title_escaped}</h1>
-            {subtitle_html}
+            <h1>Flamegraph</h1>
+            
         </div>
         <div class="controls">
             <div class="search-box">
@@ -540,11 +359,11 @@ footer {{
     <div class="stats">
         <div class="stat">
             <span class="stat-label">Total Samples</span>
-            <span class="stat-value">{total_samples_fmt}</span>
+            <span class="stat-value">29,349,436</span>
         </div>
         <div class="stat">
             <span class="stat-label">Max Depth</span>
-            <span class="stat-value">{depth_max}</span>
+            <span class="stat-value">11</span>
         </div>
         <div class="stat" id="matchedStat" style="display:none">
             <span class="stat-label">Matched</span>
@@ -554,54 +373,50 @@ footer {{
     
     <div class="chart-container">
         <div class="chart" id="chart">
-"##,
-        title = escape_html(title),
-        chart_height = chart_height,
-        frame_height_css = frame_height - 2,
-        title_escaped = escape_html(title),
-        subtitle_html = subtitle.map(|s| format!(r#"<p class="subtitle">{}</p>"#, escape_html(s))).unwrap_or_default(),
-        total_samples_fmt = format_samples(total_samples),
-        depth_max = depth_max
-    ).unwrap();
-
-    // Generate frames
-    for frame in &frames {
-        let duration = frame.end - frame.start;
-        if duration == 0 {
-            continue;
-        }
-        
-        let width_pct = (duration as f64 / total_samples as f64) * 100.0;
-        if width_pct < 0.08 {
-            continue; // Skip very narrow frames
-        }
-        
-        let left_pct = (frame.start as f64 / total_samples as f64) * 100.0;
-        let bottom = frame.depth * frame_height;
-        let pct = (duration as f64 / total_samples as f64) * 100.0;
-        
-        let (r, g, b) = color_for_name(&frame.name);
-        let display_name = if frame.name.is_empty() { "all" } else { &frame.name };
-        
-        writeln!(
-            html,
-            r#"            <div class="frame" style="left:{:.4}%;width:{:.4}%;bottom:{}px;background:rgb({},{},{});" data-name="{}" data-samples="{}" data-pct="{:.2}" data-depth="{}" data-start="{}" data-end="{}">{}</div>"#,
-            left_pct,
-            width_pct,
-            bottom,
-            r, g, b,
-            escape_html(display_name),
-            duration,
-            pct,
-            frame.depth,
-            frame.start,
-            frame.end,
-            escape_html(display_name)
-        ).unwrap();
-    }
-
-    // Close chart and add tooltip + context menu + footer + script
-    write!(html, r##"        </div>
+            <div class="frame" style="left:0.0000%;width:2.6543%;bottom:40px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="779036" data-pct="2.65" data-depth="2" data-start="0" data-end="779036">__cos_fma</div>
+            <div class="frame" style="left:5.1857%;width:5.3746%;bottom:200px;background:rgb(179,14,94);" data-name="do_cos" data-samples="1577410" data-pct="5.37" data-depth="10" data-start="1521979" data-end="3099389">do_cos</div>
+            <div class="frame" style="left:5.1857%;width:5.3746%;bottom:180px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="1577410" data-pct="5.37" data-depth="9" data-start="1521979" data-end="3099389">__cos_fma</div>
+            <div class="frame" style="left:10.5603%;width:1.9559%;bottom:200px;background:rgb(179,113,14);" data-name="do_sin" data-samples="574048" data-pct="1.96" data-depth="10" data-start="3099389" data-end="3673437">do_sin</div>
+            <div class="frame" style="left:10.5603%;width:1.9559%;bottom:180px;background:rgb(28,189,14);" data-name="__sin_fma" data-samples="574048" data-pct="1.96" data-depth="9" data-start="3099389" data-end="3673437">__sin_fma</div>
+            <div class="frame" style="left:2.6543%;width:9.8619%;bottom:160px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="2894401" data-pct="9.86" data-depth="8" data-start="779036" data-end="3673437">compute_inner</div>
+            <div class="frame" style="left:2.6543%;width:9.8619%;bottom:140px;background:rgb(198,20,142);" data-name="compute_middle_a" data-samples="2894401" data-pct="9.86" data-depth="7" data-start="779036" data-end="3673437">compute_middle_a</div>
+            <div class="frame" style="left:15.0334%;width:2.3606%;bottom:180px;background:rgb(162,62,26);" data-name="sin@plt" data-samples="692819" data-pct="2.36" data-depth="9" data-start="4412210" data-end="5105029">sin@plt</div>
+            <div class="frame" style="left:12.5162%;width:4.8777%;bottom:160px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="1431592" data-pct="4.88" data-depth="8" data-start="3673437" data-end="5105029">compute_inner</div>
+            <div class="frame" style="left:12.5162%;width:4.8777%;bottom:140px;background:rgb(198,20,139);" data-name="compute_middle_b" data-samples="1431592" data-pct="4.88" data-depth="7" data-start="3673437" data-end="5105029">compute_middle_b</div>
+            <div class="frame" style="left:2.6543%;width:14.7396%;bottom:120px;background:rgb(196,152,23);" data-name="compute_outer_1" data-samples="4325993" data-pct="14.74" data-depth="6" data-start="779036" data-end="5105029">compute_outer_1</div>
+            <div class="frame" style="left:17.3940%;width:2.8802%;bottom:180px;background:rgb(179,14,94);" data-name="do_cos" data-samples="845320" data-pct="2.88" data-depth="9" data-start="5105029" data-end="5950349">do_cos</div>
+            <div class="frame" style="left:17.3940%;width:2.8802%;bottom:160px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="845320" data-pct="2.88" data-depth="8" data-start="5105029" data-end="5950349">__cos_fma</div>
+            <div class="frame" style="left:20.2742%;width:2.7749%;bottom:180px;background:rgb(179,113,14);" data-name="do_sin" data-samples="814408" data-pct="2.77" data-depth="9" data-start="5950349" data-end="6764757">do_sin</div>
+            <div class="frame" style="left:20.2742%;width:2.7749%;bottom:160px;background:rgb(28,189,14);" data-name="__sin_fma" data-samples="814408" data-pct="2.77" data-depth="8" data-start="5950349" data-end="6764757">__sin_fma</div>
+            <div class="frame" style="left:17.3940%;width:5.6551%;bottom:140px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="1659728" data-pct="5.66" data-depth="7" data-start="5105029" data-end="6764757">compute_inner</div>
+            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:200px;background:rgb(31,186,23);" data-name="libc_feresetround_sse_ctx" data-samples="892874" data-pct="3.04" data-depth="10" data-start="6764757" data-end="7657631">libc_feresetround_sse_ctx</div>
+            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:180px;background:rgb(33,181,16);" data-name="__cos_fma" data-samples="892874" data-pct="3.04" data-depth="9" data-start="6764757" data-end="7657631">__cos_fma</div>
+            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:160px;background:rgb(43,176,17);" data-name="compute_inner" data-samples="892874" data-pct="3.04" data-depth="8" data-start="6764757" data-end="7657631">compute_inner</div>
+            <div class="frame" style="left:23.0490%;width:3.0422%;bottom:140px;background:rgb(198,20,142);" data-name="compute_middle_a" data-samples="892874" data-pct="3.04" data-depth="7" data-start="6764757" data-end="7657631">compute_middle_a</div>
+            <div class="frame" style="left:17.3940%;width:8.6973%;bottom:120px;background:rgb(196,155,23);" data-name="compute_outer_2" data-samples="2552602" data-pct="8.70" data-depth="6" data-start="5105029" data-end="7657631">compute_outer_2</div>
+            <div class="frame" style="left:95.1857%;width:3.4765%;bottom:160px;background:rgb(24,120,179);" data-name="_int_free" data-samples="1020329" data-pct="3.48" data-depth="8" data-start="27936455" data-end="28956784">_int_free</div>
+            <div class="frame" style="left:95.1857%;width:3.4765%;bottom:140px;background:rgb(15,30,173);" data-name="cfree@GLIBC_2.2.5" data-samples="1020329" data-pct="3.48" data-depth="7" data-start="27936455" data-end="28956784">cfree@GLIBC_2.2.5</div>
+            <div class="frame" style="left:26.0912%;width:72.5709%;bottom:120px;background:rgb(21,203,45);" data-name="heavy_allocation_work" data-samples="21299153" data-pct="72.57" data-depth="6" data-start="7657631" data-end="28956784">heavy_allocation_work</div>
+            <div class="frame" style="left:98.6621%;width:0.4861%;bottom:140px;background:rgb(18,169,18);" data-name="__printf_chk" data-samples="142654" data-pct="0.49" data-depth="7" data-start="28956784" data-end="29099438">__printf_chk</div>
+            <div class="frame" style="left:98.6621%;width:0.4861%;bottom:120px;background:rgb(97,174,14);" data-name="printf" data-samples="142654" data-pct="0.49" data-depth="6" data-start="28956784" data-end="29099438">printf</div>
+            <div class="frame" style="left:2.6543%;width:96.4939%;bottom:100px;background:rgb(26,156,28);" data-name="main" data-samples="28320402" data-pct="96.49" data-depth="5" data-start="779036" data-end="29099438">main</div>
+            <div class="frame" style="left:2.6543%;width:96.4939%;bottom:80px;background:rgb(198,198,20);" data-name="__libc_start_call_main" data-samples="28320402" data-pct="96.49" data-depth="4" data-start="779036" data-end="29099438">__libc_start_call_main</div>
+            <div class="frame" style="left:2.6543%;width:96.4939%;bottom:60px;background:rgb(104,191,17);" data-name="__libc_start_main@GLIBC_2.2.5" data-samples="28320402" data-pct="96.49" data-depth="3" data-start="779036" data-end="29099438">__libc_start_main@GLIBC_2.2.5</div>
+            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:220px;background:rgb(173,25,165);" data-name="do_lookup_x" data-samples="124999" data-pct="0.43" data-depth="11" data-start="29099438" data-end="29224437">do_lookup_x</div>
+            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:200px;background:rgb(83,156,26);" data-name="_dl_lookup_symbol_x" data-samples="124999" data-pct="0.43" data-depth="10" data-start="29099438" data-end="29224437">_dl_lookup_symbol_x</div>
+            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:180px;background:rgb(112,20,157);" data-name="elf_machine_rela" data-samples="124999" data-pct="0.43" data-depth="9" data-start="29099438" data-end="29224437">elf_machine_rela</div>
+            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:160px;background:rgb(56,171,27);" data-name="elf_dynamic_do_Rela" data-samples="124999" data-pct="0.43" data-depth="8" data-start="29099438" data-end="29224437">elf_dynamic_do_Rela</div>
+            <div class="frame" style="left:99.1482%;width:0.4259%;bottom:140px;background:rgb(127,187,16);" data-name="_dl_relocate_object" data-samples="124999" data-pct="0.43" data-depth="7" data-start="29099438" data-end="29224437">_dl_relocate_object</div>
+            <div class="frame" style="left:99.5741%;width:0.4259%;bottom:160px;background:rgb(32,97,182);" data-name="_dl_new_object" data-samples="124999" data-pct="0.43" data-depth="8" data-start="29224437" data-end="29349436">_dl_new_object</div>
+            <div class="frame" style="left:99.5741%;width:0.4259%;bottom:140px;background:rgb(119,16,187);" data-name="setup_vdso" data-samples="124999" data-pct="0.43" data-depth="7" data-start="29224437" data-end="29349436">setup_vdso</div>
+            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:120px;background:rgb(185,24,109);" data-name="dl_main" data-samples="249998" data-pct="0.85" data-depth="6" data-start="29099438" data-end="29349436">dl_main</div>
+            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:100px;background:rgb(186,123,23);" data-name="_dl_sysdep_start" data-samples="249998" data-pct="0.85" data-depth="5" data-start="29099438" data-end="29349436">_dl_sysdep_start</div>
+            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:80px;background:rgb(41,181,22);" data-name="_dl_start_final" data-samples="249998" data-pct="0.85" data-depth="4" data-start="29099438" data-end="29349436">_dl_start_final</div>
+            <div class="frame" style="left:99.1482%;width:0.8518%;bottom:60px;background:rgb(191,11,197);" data-name="_dl_start" data-samples="249998" data-pct="0.85" data-depth="3" data-start="29099438" data-end="29349436">_dl_start</div>
+            <div class="frame" style="left:2.6543%;width:97.3457%;bottom:40px;background:rgb(192,11,123);" data-name="_start" data-samples="28570400" data-pct="97.35" data-depth="2" data-start="779036" data-end="29349436">_start</div>
+            <div class="frame" style="left:0.0000%;width:100.0000%;bottom:20px;background:rgb(180,107,17);" data-name="cpu_test" data-samples="29349436" data-pct="100.00" data-depth="1" data-start="0" data-end="29349436">cpu_test</div>
+            <div class="frame" style="left:0.0000%;width:100.0000%;bottom:0px;background:rgb(99,102,241);" data-name="all" data-samples="29349436" data-pct="100.00" data-depth="0" data-start="0" data-end="29349436">all</div>
+        </div>
     </div>
     
     <div class="tooltip" id="tooltip">
@@ -649,7 +464,7 @@ footer {{
 </div>
 
 <script>
-(function() {{
+(function() {
     const chart = document.getElementById('chart');
     const tooltip = document.getElementById('tooltip');
     const tooltipName = document.getElementById('tooltipName');
@@ -666,7 +481,7 @@ footer {{
     const resetHiddenBtn = document.getElementById('resetHidden');
     
     const frames = Array.from(document.querySelectorAll('.frame'));
-    const totalSamples = {total_samples};
+    const totalSamples = 29349436;
     
     let zoomedFrame = null;
     let searchTerm = null;
@@ -674,31 +489,31 @@ footer {{
     let hiddenStacks = new Set();
     
     // Store original positions
-    frames.forEach(f => {{
+    frames.forEach(f => {
         f.dataset.origStart = f.dataset.start;
         f.dataset.origEnd = f.dataset.end;
         f.dataset.origLeft = f.style.left;
         f.dataset.origWidth = f.style.width;
-    }});
+    });
     
-    function formatNumber(n) {{
-        return n.toString().replace(/\B(?=(\d{{3}})+(?!\d))/g, ',');
-    }}
+    function formatNumber(n) {
+        return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
     
-    function isFrameHidden(frame) {{
+    function isFrameHidden(frame) {
         const start = parseInt(frame.dataset.origStart);
         const end = parseInt(frame.dataset.origEnd);
         const depth = parseInt(frame.dataset.depth);
         
-        for (const hidden of hiddenStacks) {{
-            if (start >= hidden.start && end <= hidden.end && depth >= hidden.depth) {{
+        for (const hidden of hiddenStacks) {
+            if (start >= hidden.start && end <= hidden.end && depth >= hidden.depth) {
                 return true;
-            }}
-        }}
+            }
+        }
         return false;
-    }}
+    }
     
-    function recalculateLayout() {{
+    function recalculateLayout() {
         // Determine visible frames
         const visibleFrames = frames.filter(f => !isFrameHidden(f));
         const hiddenFramesList = frames.filter(f => isFrameHidden(f));
@@ -710,71 +525,71 @@ footer {{
         visibleFrames.forEach(f => f.classList.remove('hidden'));
         
         // If no frames are hidden, restore original layout
-        if (hiddenStacks.size === 0) {{
-            frames.forEach(f => {{
+        if (hiddenStacks.size === 0) {
+            frames.forEach(f => {
                 f.classList.remove('hidden');
                 f.style.left = f.dataset.origLeft;
                 f.style.width = f.dataset.origWidth;
-            }});
+            });
             applySearch();
             return;
-        }}
+        }
         
         // Group visible frames by depth
         const byDepth = new Map();
-        visibleFrames.forEach(f => {{
+        visibleFrames.forEach(f => {
             const depth = parseInt(f.dataset.depth);
             if (!byDepth.has(depth)) byDepth.set(depth, []);
             byDepth.get(depth).push(f);
-        }});
+        });
         
-        if (byDepth.size === 0) {{
+        if (byDepth.size === 0) {
             applySearch();
             return;
-        }}
+        }
         
         // Process depth 0 (root) - always fills 100%
         const rootFrames = byDepth.get(0) || [];
-        rootFrames.forEach(f => {{
+        rootFrames.forEach(f => {
             f.style.left = '0%';
             f.style.width = '100%';
             // Store adjusted range for children to reference
             f._adjustedLeft = 0;
             f._adjustedWidth = 100;
-        }});
+        });
         
         // Process each subsequent depth
         const maxDepth = Math.max(...Array.from(byDepth.keys()));
         
-        for (let depth = 1; depth <= maxDepth; depth++) {{
+        for (let depth = 1; depth <= maxDepth; depth++) {
             const framesAtDepth = byDepth.get(depth) || [];
             const parentFrames = byDepth.get(depth - 1) || [];
             
             // Group children by their parent based on original sample ranges
             const parentGroups = new Map();
             
-            framesAtDepth.forEach(f => {{
+            framesAtDepth.forEach(f => {
                 const fStart = parseInt(f.dataset.origStart);
                 const fEnd = parseInt(f.dataset.origEnd);
                 
                 // Find parent that contains this frame
-                const parent = parentFrames.find(p => {{
+                const parent = parentFrames.find(p => {
                     const pStart = parseInt(p.dataset.origStart);
                     const pEnd = parseInt(p.dataset.origEnd);
                     return pStart <= fStart && pEnd >= fEnd;
-                }});
+                });
                 
-                if (parent) {{
+                if (parent) {
                     const parentKey = parent.dataset.origStart + '-' + parent.dataset.origEnd;
-                    if (!parentGroups.has(parentKey)) {{
-                        parentGroups.set(parentKey, {{ parent, children: [] }});
-                    }}
+                    if (!parentGroups.has(parentKey)) {
+                        parentGroups.set(parentKey, { parent, children: [] });
+                    }
                     parentGroups.get(parentKey).children.push(f);
-                }}
-            }});
+                }
+            });
             
             // Position each group's children to fill their parent's width
-            parentGroups.forEach(({{ parent, children }}) => {{
+            parentGroups.forEach(({ parent, children }) => {
                 const parentLeft = parent._adjustedLeft !== undefined ? parent._adjustedLeft : parseFloat(parent.style.left);
                 const parentWidth = parent._adjustedWidth !== undefined ? parent._adjustedWidth : parseFloat(parent.style.width);
                 
@@ -782,15 +597,15 @@ footer {{
                 children.sort((a, b) => parseInt(a.dataset.origStart) - parseInt(b.dataset.origStart));
                 
                 // Calculate total samples of visible children only
-                const totalChildSamples = children.reduce((sum, c) => {{
+                const totalChildSamples = children.reduce((sum, c) => {
                     return sum + (parseInt(c.dataset.origEnd) - parseInt(c.dataset.origStart));
-                }}, 0);
+                }, 0);
                 
                 if (totalChildSamples === 0) return;
                 
                 // Position children proportionally within parent's width
                 let currentLeft = parentLeft;
-                children.forEach(child => {{
+                children.forEach(child => {
                     const childSamples = parseInt(child.dataset.origEnd) - parseInt(child.dataset.origStart);
                     const widthPct = (childSamples / totalChildSamples) * parentWidth;
                     
@@ -802,22 +617,22 @@ footer {{
                     child._adjustedWidth = widthPct;
                     
                     currentLeft += widthPct;
-                }});
-            }});
-        }}
+                });
+            });
+        }
         
         // Clean up temporary properties
-        frames.forEach(f => {{
+        frames.forEach(f => {
             delete f._adjustedLeft;
             delete f._adjustedWidth;
-        }});
+        });
         
         applySearch();
-    }}
+    }
     
     // Tooltip handling
-    frames.forEach(frame => {{
-        frame.addEventListener('mouseenter', (e) => {{
+    frames.forEach(frame => {
+        frame.addEventListener('mouseenter', (e) => {
             const name = frame.dataset.name;
             const samples = parseInt(frame.dataset.samples);
             const pct = parseFloat(frame.dataset.pct);
@@ -827,15 +642,15 @@ footer {{
             const end = parseInt(frame.dataset.end);
             
             let childSamples = 0;
-            frames.forEach(f => {{
+            frames.forEach(f => {
                 if (f.classList.contains('hidden')) return;
                 const fDepth = parseInt(f.dataset.depth);
                 const fStart = parseInt(f.dataset.start);
                 const fEnd = parseInt(f.dataset.end);
-                if (fDepth === depth + 1 && fStart >= start && fEnd <= end) {{
+                if (fDepth === depth + 1 && fStart >= start && fEnd <= end) {
                     childSamples += parseInt(f.dataset.samples);
-                }}
-            }});
+                }
+            });
             
             const selfSamples = samples - childSamples;
             const selfPct = (selfSamples / totalSamples * 100).toFixed(2);
@@ -845,13 +660,13 @@ footer {{
             tooltipPct.textContent = pct.toFixed(2) + '%';
             tooltipSelf.textContent = formatNumber(selfSamples) + ' (' + selfPct + '%)';
             tooltip.classList.add('visible');
-        }});
+        });
         
-        frame.addEventListener('mouseleave', () => {{
+        frame.addEventListener('mouseleave', () => {
             tooltip.classList.remove('visible');
-        }});
+        });
         
-        frame.addEventListener('mousemove', (e) => {{
+        frame.addEventListener('mousemove', (e) => {
             const x = e.clientX + 16;
             const y = e.clientY + 16;
             const rect = tooltip.getBoundingClientRect();
@@ -859,13 +674,13 @@ footer {{
             const maxY = window.innerHeight - rect.height - 16;
             tooltip.style.left = Math.min(x, maxX) + 'px';
             tooltip.style.top = Math.min(y, maxY) + 'px';
-        }});
+        });
         
-        frame.addEventListener('click', () => {{
+        frame.addEventListener('click', () => {
             zoomTo(frame);
-        }});
+        });
         
-        frame.addEventListener('contextmenu', (e) => {{
+        frame.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             contextTarget = frame;
             
@@ -873,42 +688,42 @@ footer {{
             contextMenu.style.top = e.clientY + 'px';
             contextMenu.classList.add('visible');
             
-            setTimeout(() => {{
+            setTimeout(() => {
                 const rect = contextMenu.getBoundingClientRect();
-                if (rect.right > window.innerWidth) {{
+                if (rect.right > window.innerWidth) {
                     contextMenu.style.left = (e.clientX - rect.width) + 'px';
-                }}
-                if (rect.bottom > window.innerHeight) {{
+                }
+                if (rect.bottom > window.innerHeight) {
                     contextMenu.style.top = (e.clientY - rect.height) + 'px';
-                }}
-            }}, 0);
-        }});
-    }});
+                }
+            }, 0);
+        });
+    });
     
-    function hideContextMenu() {{
+    function hideContextMenu() {
         contextMenu.classList.remove('visible');
         contextTarget = null;
-    }}
+    }
     
-    hideStackBtn.addEventListener('click', () => {{
+    hideStackBtn.addEventListener('click', () => {
         if (!contextTarget) return;
         
         const start = parseInt(contextTarget.dataset.origStart);
         const end = parseInt(contextTarget.dataset.origEnd);
         const depth = parseInt(contextTarget.dataset.depth);
         
-        hiddenStacks.add({{ start, end, depth }});
+        hiddenStacks.add({ start, end, depth });
         hideContextMenu();
         recalculateLayout();
         resetBtn.disabled = false;
-    }});
+    });
     
-    resetHiddenBtn.addEventListener('click', () => {{
+    resetHiddenBtn.addEventListener('click', () => {
         hideContextMenu();
         resetAll();
-    }});
+    });
     
-    function zoomTo(frame) {{
+    function zoomTo(frame) {
         if (!frame || frame.classList.contains('hidden')) return;
         
         const targetStart = parseInt(frame.dataset.start);
@@ -919,7 +734,7 @@ footer {{
         zoomedFrame = frame;
         resetBtn.disabled = false;
         
-        frames.forEach(f => {{
+        frames.forEach(f => {
             if (f.classList.contains('hidden')) return;
             
             const fStart = parseInt(f.dataset.start);
@@ -928,17 +743,17 @@ footer {{
             
             f.classList.remove('zoomed-parent', 'faded');
             
-            if (fEnd <= targetStart || fStart >= targetEnd) {{
+            if (fEnd <= targetStart || fStart >= targetEnd) {
                 f.classList.add('hidden');
                 return;
-            }}
+            }
             
-            if (fDepth < targetDepth && fStart <= targetStart && fEnd >= targetEnd) {{
+            if (fDepth < targetDepth && fStart <= targetStart && fEnd >= targetEnd) {
                 f.classList.add('zoomed-parent');
                 f.style.left = '0%';
                 f.style.width = '100%';
                 return;
-            }}
+            }
             
             const newStart = Math.max(0, fStart - targetStart);
             const newEnd = Math.min(targetWidth, fEnd - targetStart);
@@ -949,229 +764,114 @@ footer {{
             
             f.style.left = leftPct + '%';
             f.style.width = widthPct + '%';
-        }});
+        });
         
         applySearch();
-    }}
+    }
     
-    function resetAll() {{
+    function resetAll() {
         zoomedFrame = null;
         hiddenStacks.clear();
         resetBtn.disabled = true;
         searchTerm = null;
         searchInput.value = '';
         
-        frames.forEach(f => {{
+        frames.forEach(f => {
             f.classList.remove('hidden', 'zoomed-parent', 'faded', 'highlight');
             f.style.left = f.dataset.origLeft;
             f.style.width = f.dataset.origWidth;
-        }});
+        });
         
         matchedStat.style.display = 'none';
         clearSearchBtn.style.display = 'none';
-    }}
+    }
     
-    function applySearch() {{
-        if (!searchTerm) {{
-            frames.forEach(f => {{
-                if (!f.classList.contains('hidden')) {{
+    function applySearch() {
+        if (!searchTerm) {
+            frames.forEach(f => {
+                if (!f.classList.contains('hidden')) {
                     f.classList.remove('highlight', 'faded');
-                }}
-            }});
+                }
+            });
             matchedStat.style.display = 'none';
             clearSearchBtn.style.display = 'none';
             return;
-        }}
+        }
         
         let regex;
-        try {{
+        try {
             regex = new RegExp(searchTerm, 'i');
-        }} catch (e) {{
+        } catch (e) {
             return;
-        }}
+        }
         
         let matchedSamples = 0;
         let visibleSamples = 0;
         
-        frames.forEach(f => {{
+        frames.forEach(f => {
             if (f.classList.contains('hidden')) return;
             
             const samples = parseInt(f.dataset.samples);
             const name = f.dataset.name;
             
-            if (!f.classList.contains('zoomed-parent')) {{
+            if (!f.classList.contains('zoomed-parent')) {
                 visibleSamples = Math.max(visibleSamples, samples);
-            }}
+            }
             
-            if (regex.test(name)) {{
+            if (regex.test(name)) {
                 f.classList.add('highlight');
                 f.classList.remove('faded');
                 matchedSamples += samples;
-            }} else {{
+            } else {
                 f.classList.remove('highlight');
                 f.classList.add('faded');
-            }}
-        }});
+            }
+        });
         
         const matchedPct = visibleSamples > 0 ? (matchedSamples / visibleSamples * 100) : 0;
         matchedValue.textContent = matchedPct.toFixed(1) + '%';
         matchedStat.style.display = 'flex';
         clearSearchBtn.style.display = 'block';
-    }}
+    }
     
-    function clearSearch() {{
+    function clearSearch() {
         searchTerm = null;
         searchInput.value = '';
         applySearch();
-        if (hiddenStacks.size === 0 && !zoomedFrame) {{
+        if (hiddenStacks.size === 0 && !zoomedFrame) {
             resetBtn.disabled = true;
-        }}
-    }}
+        }
+    }
     
     // Event listeners
-    document.addEventListener('click', (e) => {{
-        if (!contextMenu.contains(e.target) && !e.target.closest('.frame')) {{
+    document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target) && !e.target.closest('.frame')) {
             hideContextMenu();
-        }}
-    }});
+        }
+    });
     
-    searchInput.addEventListener('input', (e) => {{
+    searchInput.addEventListener('input', (e) => {
         searchTerm = e.target.value || null;
         applySearch();
         if (searchTerm) resetBtn.disabled = false;
-    }});
+    });
     
     resetBtn.addEventListener('click', resetAll);
     clearSearchBtn.addEventListener('click', clearSearch);
     
-    document.addEventListener('keydown', (e) => {{
-        if (e.key === 'Escape') {{
-            if (contextMenu.classList.contains('visible')) {{
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (contextMenu.classList.contains('visible')) {
                 hideContextMenu();
-            }} else if (searchTerm || hiddenStacks.size > 0 || zoomedFrame) {{
+            } else if (searchTerm || hiddenStacks.size > 0 || zoomedFrame) {
                 resetAll();
-            }}
-        }} else if (e.key === '/' && document.activeElement !== searchInput) {{
+            }
+        } else if (e.key === '/' && document.activeElement !== searchInput) {
             e.preventDefault();
             searchInput.focus();
-        }}
-    }});
-}})();
+        }
+    });
+})();
 </script>
 </body>
-</html>"##,
-        total_samples = total_samples
-    ).unwrap();
-
-    html
-}
-
-fn generate_error_html(message: &str) -> String {
-    format!(r#"<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Error</title>
-<style>
-body {{
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #0c0f1a;
-    color: #e2e8f0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}}
-.error {{
-    text-align: center;
-    padding: 48px;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 12px;
-}}
-.error h1 {{
-    color: #f87171;
-    font-size: 1.25rem;
-    margin-bottom: 8px;
-}}
-.error p {{
-    color: #94a3b8;
-}}
-</style>
-</head>
-<body>
-<div class="error">
-    <h1>Error</h1>
-    <p>{}</p>
-</div>
-</body>
-</html>"#, escape_html(message))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_basic_generation() {
-        let mut stacks = HashMap::new();
-        stacks.insert("main;foo;bar".to_string(), 100);
-        stacks.insert("main;foo;baz".to_string(), 50);
-        stacks.insert("main;qux".to_string(), 25);
-
-        let html = generate_flamegraph(&stacks, "Test Graph", None);
-        
-        assert!(html.contains("<!DOCTYPE html>"));
-        assert!(html.contains("Test Graph"));
-        assert!(html.contains("main"));
-        assert!(html.contains("foo"));
-        assert!(html.contains("bar"));
-    }
-
-    #[test]
-    fn test_with_subtitle() {
-        let mut stacks = HashMap::new();
-        stacks.insert("a;b".to_string(), 10);
-
-        let html = generate_flamegraph(&stacks, "Title", Some("My Subtitle"));
-        
-        assert!(html.contains("My Subtitle"));
-    }
-
-    #[test]
-    fn test_empty_stacks() {
-        let stacks = HashMap::new();
-        let html = generate_flamegraph(&stacks, "Empty", None);
-        
-        assert!(html.contains("Error"));
-        assert!(html.contains("No valid stack data"));
-    }
-
-    #[test]
-    fn test_html_escaping() {
-        let mut stacks = HashMap::new();
-        stacks.insert("main;<script>alert('xss')</script>".to_string(), 10);
-
-        let html = generate_flamegraph(&stacks, "Test <XSS>", None);
-        
-        assert!(!html.contains("<script>alert"));
-        assert!(html.contains("&lt;script&gt;"));
-    }
-
-    #[test]
-    fn test_color_generation() {
-        let (r1, g1, b1) = color_for_name("function_a");
-        let (r2, g2, b2) = color_for_name("function_a");
-        
-        // Same name should produce same color
-        assert_eq!((r1, g1, b1), (r2, g2, b2));
-    }
-
-    #[test]
-    fn test_format_samples() {
-        assert_eq!(format_samples(1), "1");
-        assert_eq!(format_samples(1000), "1,000");
-        assert_eq!(format_samples(1000000), "1,000,000");
-    }
-}
+</html>

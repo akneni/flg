@@ -17,7 +17,7 @@ fn gen_html(cli_args: &[String]) {
         &stackcollapse::Options::default()
     );
 
-    let html = flamegraph::generate_flamegraph(&stacks, "title", None);
+    let html = flamegraph::generate_flamegraph(&stacks, "Flamegraph", None);
     fs::write(out_filename, html).unwrap();
 }
 
