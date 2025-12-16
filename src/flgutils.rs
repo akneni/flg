@@ -27,3 +27,23 @@ pub fn get_arg<'a>(cli_args: &'a[String], flag: &str) -> Option<&'a str> {
     }
     None
 }
+
+/// Gets all command line arguments that are "floating": not a flag itself and
+/// not the argument for a flag. Returns them in order of appearance.
+/// This enables collecting multiple input files for batch processing.
+pub fn get_all_floating_args<'a>(cli_args: &'a[String]) -> Vec<&'a str> {
+    let mut result = Vec::new();
+    let mut i = 0;
+    
+    while i < cli_args.len() {
+        if cli_args[i].starts_with("-") {
+            // Skip the flag and its argument
+            i += 2;
+        } else {
+            result.push(cli_args[i].as_str());
+            i += 1;
+        }
+    }
+    
+    result
+}
