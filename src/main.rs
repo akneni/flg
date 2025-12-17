@@ -4,6 +4,7 @@ mod flgutils;
 mod perfutils;
 
 use std::{env, fs, path::Path};
+use std::collections::HashMap;
 
 fn gen_html(cli_args: &[String]) {
     let in_filename = flgutils::get_floating_arg(cli_args)
@@ -39,6 +40,8 @@ fn gen_batch_html(cli_args: &[String]) {
 
     let mut entries = Vec::new();
     
+    let mut combined_stacks = HashMap::new();
+
     for in_filename in &in_filenames {
         let title = Path::new(in_filename)
             .file_name()
@@ -52,7 +55,19 @@ fn gen_batch_html(cli_args: &[String]) {
             &stackcollapse::Options::default()
         );
 
+        // Merge into combined stacks
+        for (stack, count) in &stacks {
+            *combined_stacks.entry(stack.clone()).or_insert(0) += count;
+        }
+
         entries.push(flamegraph::FlameGraphEntry { stacks, title });
+    }
+
+    if entries.len() > 1 {
+        entries.push(flamegraph::FlameGraphEntry { 
+            stacks: combined_stacks, 
+            title: "Combined".to_string() 
+        });
     }
 
     let html = flamegraph::generate_batch_flamegraph(&entries);

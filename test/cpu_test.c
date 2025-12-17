@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 // Simulate CPU-intensive work with various call depths
 volatile double sink;
@@ -59,8 +63,45 @@ void heavy_allocation_work(int count) {
     }
 }
 
+void perform_io_work(int count) {
+    // Create a temporary file
+    char filename[] = "temp_io_test_XXXXXX";
+    int fd = mkstemp(filename);
+    if (fd == -1) {
+        perror("mkstemp");
+        return;
+    }
+
+    // Unlink immediately so it's deleted on close
+    unlink(filename);
+
+    const int buf_size = 4096;
+    char *buf = malloc(buf_size);
+    // Fill buffer with random-ish data
+    for (int i = 0; i < buf_size; i++) {
+        buf[i] = (char)(i % 256);
+    }
+
+    // Do mixed read/write
+    for (int i = 0; i < count; i++) {
+        // Write
+        if (lseek(fd, 0, SEEK_SET) == -1) break;
+        if (write(fd, buf, buf_size) == -1) break;
+        
+        // Sync to force I/O
+        fsync(fd);
+        
+        // Read back
+        if (lseek(fd, 0, SEEK_SET) == -1) break;
+        if (read(fd, buf, buf_size) == -1) break;
+    }
+
+    free(buf);
+    close(fd);
+}
+
 int main(int argc, char *argv[]) {
-    int iterations = 1000;
+    int iterations = 1;
     if (argc > 1) {
         iterations = atoi(argv[1]);
     }
@@ -72,7 +113,10 @@ int main(int argc, char *argv[]) {
     // Multiple code paths for interesting flamegraph
     result += compute_outer_1(iterations);
     result += compute_outer_2(iterations);
+    result += compute_outer_2(iterations);
     heavy_allocation_work(iterations * 10);
+    perform_io_work(iterations / 20);
+    perform_io_work(iterations / 20);
     
     printf("Result: %f\n", result);
     return 0;

@@ -17,7 +17,7 @@ perf record -g --call-graph dwarf -o test/perf_oncpu.data ./test/cpu_test 2000
 # Run with perf record for off-CPU time (sched:sched_switch tracepoint)
 # Requires root for scheduler tracepoints
 echo "Running perf record for off-CPU profiling..."
-sudo perf record -g --call-graph dwarf -e sched:sched_switch -o test/perf_offcpu.data ./test/cpu_test 2000
+sudo perf record -g -e sched:sched_switch -o test/perf_offcpu.data ./test/cpu_test 2000
 sudo chown $(whoami):$(whoami) test/perf_offcpu.data
 
 # Generate flamegraphs
