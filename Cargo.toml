@@ -3,6 +3,7 @@ name = "flg"
 version = "0.1.0"
 authors = ["Anish Kanthamneni <akneni@gmail.com>"]
 edition = "2024"
+description = "A linux profiling utility"
 license = "MIT"
 
 [dependencies]
