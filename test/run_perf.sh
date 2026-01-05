@@ -27,6 +27,6 @@ cargo run -- gen test/perf_oncpu.data -o flamegraph_oncpu.html
 echo "Generating off-CPU flamegraph..."
 cargo run -- gen test/perf_offcpu.data -o flamegraph_offcpu.html
 
-cargo run -- genbatch test/*.data -o flamegraph.html
+cargo run -- gen test/*.data -o flamegraph.html
 
 echo "Done! Generated flamegraph_oncpu.html and flamegraph_offcpu.html"
