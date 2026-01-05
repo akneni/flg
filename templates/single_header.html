@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        {
+            style
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="title-section">
+                <h1>{title_escaped}</h1>
+                {subtitle_html}
+            </div>
+            <div class="controls">
+                <div class="search-box">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" id="search" placeholder="Search functions (regex)..." />
+                </div>
+                <button class="btn" id="resetZoom" disabled>Reset Zoom</button>
+                <button class="btn" id="clearSearch" style="display:none">Clear Search</button>
+            </div>
+        </header>
+
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-label">Total Samples</span>
+                <span class="stat-value">{total_samples_fmt}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Max Depth</span>
+                <span class="stat-value">{depth_max}</span>
+            </div>
+            <div class="stat" id="matchedStat" style="display:none">
+                <span class="stat-label">Matched</span>
+                <span class="stat-value" id="matchedValue">0%</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart" id="chart" style="height:{chart_height}px">
+                <!-- Frames will be inserted here -->

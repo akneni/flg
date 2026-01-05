@@ -15,7 +15,13 @@ fn from_datafile(filepath: &str) -> String {
         },
     };
 
-    String::from_utf8(cmd.stdout).unwrap()
+    match String::from_utf8(cmd.stdout) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to parse perf script output as UTF-8: {}", e);
+            process::exit(1);
+        }
+    }
 }
 
 pub fn from_file(filepath: &str) -> String {
@@ -30,13 +36,24 @@ pub fn from_file(filepath: &str) -> String {
         },
     };
 
-    let bytes_read = fp.read(&mut buf).unwrap();
+    let bytes_read = match fp.read(&mut buf) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("Failed to read header from {}: {}", filepath, e);
+            process::exit(1);
+        }
+    };
     drop(fp);
 
-    if 
-    bytes_read == 8 && &buf == header.as_bytes() {
+    if bytes_read == 8 && &buf == header.as_bytes() {
         from_datafile(filepath)
     } else {
-        fs::read_to_string(filepath).unwrap()
+        match fs::read_to_string(filepath) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Failed to read {}: {}", filepath, e);
+                process::exit(1);
+            }
+        }
     }
 }

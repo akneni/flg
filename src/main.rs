@@ -25,7 +25,10 @@ fn gen_html(cli_args: &[String]) {
     );
 
     let html = flamegraph::generate_flamegraph(&stacks, default_title, None);
-    fs::write(out_filename, html).unwrap();
+    if let Err(e) = fs::write(out_filename, html) {
+        eprintln!("Failed to write output to {}: {}", out_filename, e);
+        std::process::exit(1);
+    }
 }
 
 fn gen_batch_html(cli_args: &[String]) {
@@ -71,16 +74,33 @@ fn gen_batch_html(cli_args: &[String]) {
     }
 
     let html = flamegraph::generate_batch_flamegraph(&entries);
-    fs::write(out_filename, html).unwrap();
+    if let Err(e) = fs::write(out_filename, html) {
+        eprintln!("Failed to write output to {}: {}", out_filename, e);
+        std::process::exit(1);
+    }
     
     eprintln!("Generated {} flamegraphs in {}", entries.len(), out_filename);
+}
+
+fn print_help() {
+    println!("flg 0.1.0");
+    println!("Usage:");
+    println!("  flg gen <perf.data> [-o <output.html>]      Generate a single flamegraph");
+    println!("  flg genbatch <perf.data>... [-o <output.html>] Generate multiple stacked flamegraphs");
+    println!("  flg --help, -h                               Print this help message");
+    println!("  flg --version, -v                            Print version information");
+}
+
+fn print_version() {
+    println!("flg 0.1.0");
 }
 
 fn main() {
     let cli_args = env::args().collect::<Vec<String>>();
     
     if cli_args.len() <= 1 {
-        panic!("Invalid Arguments");
+        print_help();
+        return;
     }
 
     match cli_args[1].as_str() {
@@ -90,7 +110,17 @@ fn main() {
         "genbatch" => {
             gen_batch_html(&cli_args[2..]);
         }
-        _ => panic!("Invalid Arguments"),
+        "--help" | "-h" => {
+            print_help();
+        }
+        "--version" | "-v" => {
+            print_version();
+        }
+        _ => {
+            eprintln!("Invalid command: {}", cli_args[1]);
+            print_help();
+            std::process::exit(1);
+        }
     }
 
 }
